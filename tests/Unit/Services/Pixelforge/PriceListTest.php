@@ -40,3 +40,10 @@ it('rounds partial text tokens up for the upper bound', function () use ($prices
     expect($estimate->expected->inputText)->toBe(2)
         ->and($estimate->maximum->inputText)->toBe(3);
 });
+
+it('expects at least the shortest reasoning the quality allows', function () use ($prices) {
+    $estimate = $prices->estimate('a small red boat', Size::Square, Quality::Medium, 0);
+
+    expect($estimate->minimum->reasoning)->toBe(200)
+        ->and($estimate->minimumCost())->toBeLessThan($estimate->expectedCost());
+});

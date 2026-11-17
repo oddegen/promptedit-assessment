@@ -38,6 +38,7 @@ class PriceList
         ['min' => $minimumReasoning, 'max' => $maximumReasoning] = $this->tokens['reasoning'][$quality->value];
 
         return new CostEstimate(
+            minimum: new TokenUsage($textTokens, $imageTokens, $outputTokens, $minimumReasoning),
             expected: new TokenUsage($textTokens, $imageTokens, $outputTokens, intdiv($minimumReasoning + $maximumReasoning, 2)),
             maximum: new TokenUsage($maximumTextTokens, $imageTokens, $outputTokens, $maximumReasoning),
             rates: $this->rates,

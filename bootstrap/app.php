@@ -8,6 +8,8 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -34,4 +36,26 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
+            $status = $response->getStatusCode();
+
+            if ($request->inertia() && in_array($status, [419, 429], true)) {
+                $message = $status === 419
+                    ? 'This page was open a while. Please try again.'
+                    : sprintf("You're moving fast. Try again in %d seconds.", $response->headers->get('Retry-After', '60'));
+
+                return Inertia::flash('toast', ['type' => 'error', 'message' => $message])->back();
+            }
+
+            if (app()->environment(['local', 'testing']) || ! in_array($status, [403, 404, 500, 503], true)) {
+                return $response;
+            }
+
+            if ($request->inertia() && ! $request->isMethod('GET')) {
+                return Inertia::flash('toast', ['type' => 'error', 'message' => 'Something went wrong on our end. Please try again.'])->back();
+            }
+
+            return Inertia::render('ErrorPage', ['status' => $status])->toResponse($request)->setStatusCode($status);
+        });
     })->create();

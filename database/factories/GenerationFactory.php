@@ -10,6 +10,8 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
+use function Illuminate\Support\enum_value;
+
 /** @extends Factory<Generation> */
 class GenerationFactory extends Factory
 {
@@ -27,6 +29,7 @@ class GenerationFactory extends Factory
             'size' => Size::Square,
             'quality' => Quality::Medium,
             'reference_images' => [],
+            'min_price' => 58_000_000,
             'estimated_price' => 70_000_000,
             'max_price' => 87_500_000,
         ];
@@ -64,7 +67,11 @@ class GenerationFactory extends Factory
             'reasoning_tokens' => 3184,
             'cost' => 305_510_000,
             'price' => 381_887_500,
-            'image_url' => 'https://pixelforge.promptedit.dev/images/'.fake()->uuid().'.png',
+            'image_url' => fn (array $attributes) => sprintf(
+                'https://picsum.photos/seed/%s/%s',
+                Str::random(10),
+                str_replace('x', '/', enum_value($attributes['size'])),
+            ),
             'image_url_expires_at' => now()->addDay(),
             'completed_at' => now(),
         ]);

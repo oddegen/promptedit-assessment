@@ -3,6 +3,10 @@
 namespace App\Exceptions;
 
 use Illuminate\Http\Client\Response;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 use RuntimeException;
 
 class PixelforgeException extends RuntimeException
@@ -36,5 +40,14 @@ class PixelforgeException extends RuntimeException
     public function isRejection(): bool
     {
         return in_array($this->errorCode, ['content_policy_violation', 'validation_failed', 'daily_limit_exceeded'], true);
+    }
+
+    public function render(Request $request): JsonResponse|RedirectResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Prices are unavailable right now.'], 503);
+        }
+
+        return Inertia::flash('toast', ['type' => 'error', 'message' => "Couldn't start that image. Try again in a moment."])->back();
     }
 }

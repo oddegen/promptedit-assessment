@@ -22,16 +22,18 @@ class CreateGeneration
     ) {}
 
     /** @param list<string> $referenceImages */
-    public function handle(User $user, string $prompt, Size $size, Quality $quality, array $referenceImages = []): Generation
+    public function handle(User $user, string $prompt, Size $size, Quality $quality, array $referenceImages = [], ?Generation $versionOf = null): Generation
     {
         $estimate = $this->pixelforge->prices()->estimate($prompt, $size, $quality, count($referenceImages));
 
         $generation = $user->generations()->create([
+            'parent_id' => $versionOf->parent_id ?? $versionOf?->id,
             'status' => GenerationStatus::Pending,
             'prompt' => $prompt,
             'size' => $size,
             'quality' => $quality,
             'reference_images' => $referenceImages,
+            'min_price' => $this->markup->apply($estimate->minimumCost()),
             'estimated_price' => $this->markup->apply($estimate->expectedCost()),
             'max_price' => $this->markup->apply($estimate->maximumCost()),
         ]);
