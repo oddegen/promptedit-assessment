@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Http;
 
 it('fetches the price list once and serves it from the cache', function () {
     Http::fake([
-        'pixelforge.promptedit.dev/v1/pricing' => Http::response(json_decode(file_get_contents(base_path('tests/Fixtures/pixelforge/pricing.json')), true)),
+        'pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricing()),
     ]);
     $client = app(PixelforgeClient::class);
 
@@ -23,12 +23,12 @@ it('submits a generation with its own id as the idempotency key and metadata', f
     config(['services.pixelforge.key' => 'pf_test_key']);
     $generation = Generation::factory()->create();
     Http::fake([
-        'pixelforge.promptedit.dev/v1/generations' => Http::response(['id' => 'gen_01', 'status' => 'queued'], 202),
+        'pixelforge.promptedit.dev/v1/generations' => Http::response(pixelforgeGeneration($generation, 'queued', ['id' => 'gen_01']), 202),
     ]);
 
-    $body = app(PixelforgeClient::class)->createGeneration($generation);
+    $remote = app(PixelforgeClient::class)->createGeneration($generation);
 
-    expect($body)->toBe(['id' => 'gen_01', 'status' => 'queued']);
+    expect($remote)->id->toBe('gen_01')->generationId->toBe($generation->id);
     Http::assertSent(fn (Request $request) => $request->hasHeader('Authorization', 'Bearer pf_test_key')
         && $request->hasHeader('Idempotency-Key', $generation->id)
         && $request->data() === [

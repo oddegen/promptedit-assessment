@@ -8,6 +8,8 @@ use App\Enums\Size;
 use Carbon\CarbonImmutable;
 use Database\Factories\GenerationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -57,6 +59,13 @@ class Generation extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Generation::class, 'parent_id');
+    }
+
+    /** @param Builder<self> $query */
+    #[Scope]
+    protected function atProvider(Builder $query): void
+    {
+        $query->whereNotNull('provider_id')->whereIn('status', [GenerationStatus::Queued, GenerationStatus::Processing]);
     }
 
     /**

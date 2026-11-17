@@ -32,4 +32,9 @@ class PixelforgeException extends RuntimeException
     {
         return in_array($this->errorCode, ['rate_limit_exceeded', 'concurrency_limit_exceeded', 'overloaded'], true);
     }
+
+    public function isRejection(): bool
+    {
+        return in_array($this->errorCode, ['content_policy_violation', 'validation_failed', 'daily_limit_exceeded'], true);
+    }
 }
