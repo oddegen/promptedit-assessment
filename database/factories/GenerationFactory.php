@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CreditTransactionType;
 use App\Enums\GenerationStatus;
 use App\Enums\Quality;
 use App\Enums\Size;
@@ -15,6 +16,19 @@ use function Illuminate\Support\enum_value;
 /** @extends Factory<Generation> */
 class GenerationFactory extends Factory
 {
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Generation $generation) {
+            if (! $generation->status->isFinished()) {
+                $generation->user->creditTransactions()->create([
+                    'generation_id' => $generation->id,
+                    'type' => CreditTransactionType::Hold,
+                    'amount' => -$generation->max_price,
+                ]);
+            }
+        });
+    }
+
     /**
      * Define the model's default state.
      *
@@ -26,12 +40,12 @@ class GenerationFactory extends Factory
             'user_id' => User::factory(),
             'status' => GenerationStatus::Pending,
             'prompt' => fake()->sentence(),
-            'size' => Size::Square,
-            'quality' => Quality::Medium,
-            'reference_images' => [],
-            'min_price' => 58_000_000,
-            'estimated_price' => 70_000_000,
-            'max_price' => 87_500_000,
+            'size' => Size::Landscape,
+            'quality' => Quality::High,
+            'reference_images' => ['https://example.com/reference.png'],
+            'min_price' => 347_756_250,
+            'estimated_price' => 402_450_000,
+            'max_price' => 457_150_000,
         ];
     }
 

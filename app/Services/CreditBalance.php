@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CreditTransactionType;
 use App\Models\User;
 
 class CreditBalance
@@ -14,12 +15,18 @@ class CreditBalance
 
     public static function of(User $user): self
     {
-        $inFlight = $user->generations()->inFlight();
+        $holds = [CreditTransactionType::Hold->value, CreditTransactionType::Release->value];
+
+        $totals = $user->creditTransactions()
+            ->toBase()
+            ->selectRaw('coalesce(sum(case when type in (?, ?) then 0 else amount end), 0) as balance', $holds)
+            ->selectRaw('coalesce(sum(case when type in (?, ?) then amount else 0 end), 0) as held', $holds)
+            ->first();
 
         return new self(
-            (int) $user->creditTransactions()->sum('amount'),
-            (int) (clone $inFlight)->sum('max_price'),
-            (clone $inFlight)->count(),
+            (int) $totals?->balance,
+            -(int) $totals?->held,
+            $user->generations()->inFlight()->count(),
         );
     }
 

@@ -75,3 +75,13 @@ test('users are rate limited', function () {
 
     $response->assertTooManyRequests();
 });
+
+test('the admin sign-in does not offer sign up', function () {
+    $this->get(route('admin.report'))->assertRedirect(route('login'));
+
+    $this->get(route('login'))->assertInertia(fn ($page) => $page->where('canRegister', false));
+});
+
+test('the regular sign-in offers sign up', function () {
+    $this->get(route('login'))->assertInertia(fn ($page) => $page->where('canRegister', true));
+});

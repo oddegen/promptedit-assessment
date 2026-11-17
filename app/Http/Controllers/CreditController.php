@@ -29,6 +29,7 @@ class CreditController extends Controller
             'packs' => $this->packs($pixelforge, $markup),
             'running' => $user->generations()->inFlight()->latest()->get(['id', 'prompt', 'max_price', 'created_at']),
             'transactions' => Inertia::scroll(fn () => $user->creditTransactions()
+                ->whereNotIn('type', [CreditTransactionType::Hold, CreditTransactionType::Release])
                 ->select('*')
                 ->selectRaw('sum(amount) over (order by created_at, id) as balance_after')
                 ->with('generation:id,prompt')
@@ -41,7 +42,7 @@ class CreditController extends Controller
                     'description' => match ($transaction->type) {
                         CreditTransactionType::Bonus => 'Welcome credit',
                         CreditTransactionType::Purchase => 'Added credits',
-                        CreditTransactionType::Charge => $transaction->generation->prompt ?? 'Image',
+                        CreditTransactionType::Charge, CreditTransactionType::Hold, CreditTransactionType::Release => $transaction->generation->prompt ?? 'Image',
                     },
                     'generation_id' => $transaction->generation_id,
                     'amount' => $transaction->amount,

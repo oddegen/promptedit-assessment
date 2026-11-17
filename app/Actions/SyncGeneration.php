@@ -24,11 +24,26 @@ class SyncGeneration
                 ->whereNull('provider_id')
                 ->update(['provider_id' => $remote->id, 'rates' => json_encode($remote->rates)]);
 
-            $changes = $this->changesFor($remote);
+            $changes = $this->changesFor($generation, $remote);
 
             $moved = Generation::whereKey($generation->id)
                 ->whereIn('status', $remote->status->reachableFrom())
                 ->update($changes);
+
+            if ($moved === 1 && $remote->status->isFinished()) {
+                $this->release($generation);
+            }
+
+            if ($moved === 0 && $remote->status === GenerationStatus::Succeeded && $remote->usage !== null) {
+                Generation::whereKey($generation->id)
+                    ->where('status', GenerationStatus::Failed)
+                    ->whereNull('cost')
+                    ->update([
+                        ...$remote->usage->toArray(),
+                        'cost' => $remote->usage->cost($remote->rates),
+                        'completed_at' => $remote->completedAt,
+                    ]);
+            }
 
             if ($moved === 1 && isset($changes['price'])) {
                 CreditTransaction::query()->insertOrIgnore([
@@ -46,20 +61,37 @@ class SyncGeneration
 
     public function fail(Generation $generation, string $code, ?string $message = null): void
     {
-        Generation::whereKey($generation->id)
-            ->where('status', GenerationStatus::Pending)
-            ->update([
-                'status' => GenerationStatus::Failed,
-                'error_code' => $code,
-                'error_message' => $message,
-                'completed_at' => now(),
-            ]);
+        DB::transaction(function () use ($generation, $code, $message) {
+            $moved = Generation::whereKey($generation->id)
+                ->where('status', GenerationStatus::Pending)
+                ->update([
+                    'status' => GenerationStatus::Failed,
+                    'error_code' => $code,
+                    'error_message' => $message,
+                    'completed_at' => now(),
+                ]);
+
+            if ($moved === 1) {
+                $this->release($generation);
+            }
+        });
 
         $generation->refresh();
     }
 
+    private function release(Generation $generation): void
+    {
+        CreditTransaction::query()->insertOrIgnoreUsing(
+            ['user_id', 'generation_id', 'type', 'amount', 'created_at'],
+            CreditTransaction::query()
+                ->where('generation_id', $generation->id)
+                ->where('type', CreditTransactionType::Hold)
+                ->selectRaw('user_id, generation_id, ?, -amount, ?', [CreditTransactionType::Release->value, now()]),
+        );
+    }
+
     /** @return array<string, mixed> */
-    private function changesFor(RemoteGeneration $remote): array
+    private function changesFor(Generation $generation, RemoteGeneration $remote): array
     {
         $changes = [
             'status' => $remote->status,
@@ -73,7 +105,7 @@ class SyncGeneration
             $changes += [
                 ...$remote->usage->toArray(),
                 'cost' => $cost,
-                'price' => $this->markup->apply($cost),
+                'price' => min($this->markup->apply($cost), $generation->max_price),
                 'image_url' => $remote->imageUrl,
                 'image_url_expires_at' => $remote->imageUrlExpiresAt,
             ];

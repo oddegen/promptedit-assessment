@@ -10,6 +10,11 @@ enum GenerationStatus: string
     case Succeeded = 'succeeded';
     case Failed = 'failed';
 
+    public function isFinished(): bool
+    {
+        return in_array($this, [self::Succeeded, self::Failed], true);
+    }
+
     /** @return list<self> */
     public function reachableFrom(): array
     {

@@ -19,8 +19,8 @@ it('shows what is available, what running images hold and the ledger with a runn
     $response->assertInertia(fn (Assert $page) => $page
         ->component('credits/Index')
         ->where('credits.balance', 4_618_112_500)
-        ->where('credits.held', 87_500_000)
-        ->where('credits.available', 4_530_612_500)
+        ->where('credits.held', 457_150_000)
+        ->where('credits.available', 4_160_962_500)
         ->has('running', 1)
         ->has('packs', 3)
         ->where('packs.0.dollars', 5)

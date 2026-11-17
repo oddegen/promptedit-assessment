@@ -10,7 +10,7 @@ test('the landing page prices a short prompt for every quality and shape', funct
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('Welcome')
-        ->where('prices.low.1024x1024.min', 14_075_000)
+        ->where('prices.low.1024x1024.min', 14_068_750)
         ->has('prices.high.1536x1024.max')
         ->where('bonus', 1_000_000_000));
 });

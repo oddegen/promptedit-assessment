@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Enums\GenerationStatus;
 use App\Exceptions\PixelforgeException;
 use App\Models\Generation;
 use App\Services\Pixelforge\PixelforgeClient;
@@ -134,7 +133,7 @@ class UsageReport
     private function succeeded(): Builder
     {
         return Generation::query()
-            ->where('generations.status', GenerationStatus::Succeeded)
+            ->whereNotNull('generations.cost')
             ->whereBetween('generations.completed_at', [$this->from->startOfDay(), $this->to->endOfDay()]);
     }
 }

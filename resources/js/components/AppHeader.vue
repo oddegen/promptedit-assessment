@@ -25,12 +25,15 @@ const user = computed(() => page.props.auth.user);
 const balance = computed(() => page.props.credits);
 const { isCurrentOrParentUrl } = useCurrentUrl();
 
-const items = computed<NavItem[]>(() => [
-    { title: 'Studio', href: studio() },
-    { title: 'History', href: history() },
-    { title: 'Credits', href: credits() },
-    ...(user.value.is_admin ? [{ title: 'Report', href: report() }] : []),
-]);
+const items = computed<NavItem[]>(() =>
+    user.value.is_admin
+        ? [{ title: 'Report', href: report() }]
+        : [
+              { title: 'Studio', href: studio() },
+              { title: 'History', href: history() },
+              { title: 'Credits', href: credits() },
+          ],
+);
 </script>
 
 <template>

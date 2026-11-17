@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Enums\CreditTransactionType;
 use App\Enums\GenerationStatus;
 use App\Enums\Quality;
 use App\Enums\Size;
@@ -12,6 +13,7 @@ use App\Services\CreditBalance;
 use App\Services\Markup;
 use App\Services\Money;
 use App\Services\Pixelforge\PixelforgeClient;
+use Brick\Math\RoundingMode;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -49,6 +51,12 @@ class CreateGeneration
                 'max_price' => $maxPrice,
             ]);
 
+            $user->creditTransactions()->create([
+                'generation_id' => $generation->id,
+                'type' => CreditTransactionType::Hold,
+                'amount' => -$maxPrice,
+            ]);
+
             SubmitGeneration::dispatch($generation)->afterCommit();
 
             return $generation;
@@ -67,13 +75,13 @@ class CreateGeneration
                 Money::format($credits->held),
                 $credits->running,
                 Str::plural('image', $credits->running),
-                Money::format($maxPrice, roundUp: true),
-                Money::format(max(0, $credits->available())),
+                Money::format($maxPrice, RoundingMode::Ceiling),
+                Money::format(max(0, $credits->available()), RoundingMode::Floor),
             )
             : sprintf(
                 'This needs up to %s, but your balance is %s. Add credits to keep going.',
-                Money::format($maxPrice, roundUp: true),
-                Money::format($credits->balance),
+                Money::format($maxPrice, RoundingMode::Ceiling),
+                Money::format($credits->balance, RoundingMode::Floor),
             );
 
         throw ValidationException::withMessages(['credits' => $message]);

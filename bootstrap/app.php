@@ -50,7 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return Inertia::flash('toast', ['type' => 'error', 'message' => $message])->back();
             }
 
-            if (app()->environment(['local', 'testing']) || ! in_array($status, [403, 404, 500, 503], true)) {
+            if (! in_array($status, [403, 404, 500, 503], true) || ($status >= 500 && app()->environment(['local', 'testing']))) {
                 return $response;
             }
 

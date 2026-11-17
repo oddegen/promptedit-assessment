@@ -72,7 +72,7 @@ it('returns 404 for a generation that belongs to someone else', function () {
 
     $response = $this->actingAs(User::factory()->create())->get(route('generations.show', $generation));
 
-    $response->assertNotFound();
+    $response->assertNotFound()->assertInertia(fn (Assert $page) => $page->component('ErrorPage')->where('status', 404));
 });
 
 it('lists only generations still in progress when filtered to running', function () {

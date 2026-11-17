@@ -34,6 +34,7 @@ import {
     shapes,
 } from '@/lib/generations';
 import { formatPrice } from '@/lib/money';
+import report from '@/actions/App/Http/Controllers/Admin/ReportController';
 import { home, login, register, studio } from '@/routes';
 import { store as registerStore } from '@/routes/register';
 import type { Quality, Size } from '@/types';
@@ -60,6 +61,11 @@ const props = defineProps<{
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+const workspace = computed(() =>
+    user.value?.is_admin
+        ? { href: report(), name: 'Report' }
+        : { href: studio(), name: 'Studio' },
+);
 const appName = computed(() => page.props.name);
 const year = new Date().getFullYear();
 
@@ -369,9 +375,9 @@ async function closeWall() {
             <div class="ml-auto flex items-center gap-5 text-sm font-medium">
                 <Link
                     v-if="user"
-                    :href="studio()"
+                    :href="workspace.href"
                     class="inline-flex h-11 items-center rounded-full bg-primary px-5 text-primary-foreground hover:bg-primary/90"
-                    >Open the studio</Link
+                    >Open the {{ workspace.name.toLowerCase() }}</Link
                 >
                 <template v-else>
                     <Link :href="login()" class="hover:underline">Log in</Link>
@@ -726,11 +732,11 @@ async function closeWall() {
                 </ol>
                 <div>
                     <Link
-                        :href="user ? studio() : register()"
+                        :href="user ? workspace.href : register()"
                         class="inline-flex h-12 items-center rounded-full bg-primary px-6 text-[15px] font-medium text-primary-foreground hover:bg-primary/90"
                         >{{
                             user
-                                ? 'Open the studio'
+                                ? `Open the ${workspace.name.toLowerCase()}`
                                 : `Start creating, ${welcomeCredit} on us`
                         }}</Link
                     >
@@ -755,9 +761,9 @@ async function closeWall() {
                         >How it works</a
                     >
                     <Link
-                        :href="user ? studio() : login()"
+                        :href="user ? workspace.href : login()"
                         class="hover:text-foreground"
-                        >{{ user ? 'Studio' : 'Log in' }}</Link
+                        >{{ user ? workspace.name : 'Log in' }}</Link
                     >
                 </nav>
                 <p class="sm:ml-auto">© {{ year }} {{ appName }}</p>

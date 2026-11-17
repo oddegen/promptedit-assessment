@@ -29,6 +29,10 @@ class PriceList
     {
         $charactersPerToken = $this->tokens['characters_per_text_token'];
         $textTokens = intdiv(mb_strlen($prompt) + $charactersPerToken - 1, $charactersPerToken);
+        $minimumTextTokens = BigDecimal::of($textTokens)
+            ->multipliedBy(BigDecimal::one()->minus((string) $this->tokens['text_token_variance']))
+            ->toScale(0, RoundingMode::Ceiling)
+            ->toInt();
         $maximumTextTokens = BigDecimal::of($textTokens)
             ->multipliedBy(BigDecimal::one()->plus((string) $this->tokens['text_token_variance']))
             ->toScale(0, RoundingMode::Ceiling)
@@ -38,7 +42,7 @@ class PriceList
         ['min' => $minimumReasoning, 'max' => $maximumReasoning] = $this->tokens['reasoning'][$quality->value];
 
         return new CostEstimate(
-            minimum: new TokenUsage($textTokens, $imageTokens, $outputTokens, $minimumReasoning),
+            minimum: new TokenUsage($minimumTextTokens, $imageTokens, $outputTokens, $minimumReasoning),
             expected: new TokenUsage($textTokens, $imageTokens, $outputTokens, intdiv($minimumReasoning + $maximumReasoning, 2)),
             maximum: new TokenUsage($maximumTextTokens, $imageTokens, $outputTokens, $maximumReasoning),
             rates: $this->rates,

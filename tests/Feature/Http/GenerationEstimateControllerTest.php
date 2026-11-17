@@ -13,7 +13,7 @@ it('quotes the lowest, expected and highest price, and the highest price of ever
     ]);
 
     $response->assertOk()->assertJson([
-        'minimum' => 58_175_000,
+        'minimum' => 58_168_750,
         'expected' => 72_237_500,
         'maximum' => 86_312_500,
         'tiers' => ['low' => 21_875_000, 'medium' => 86_312_500, 'high' => 340_062_500],

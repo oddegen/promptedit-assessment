@@ -2,7 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import { studio } from '@/routes';
+import { home } from '@/routes';
 
 const props = defineProps<{ status: number }>();
 
@@ -43,9 +43,9 @@ const message = computed(
         </h1>
         <p class="max-w-sm text-muted-foreground">{{ message.description }}</p>
         <Link
-            :href="studio()"
+            :href="home()"
             class="mt-2 inline-flex h-11 items-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >Go to the studio</Link
+            >Back to home</Link
         >
     </main>
 </template>

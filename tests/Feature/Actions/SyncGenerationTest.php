@@ -80,7 +80,8 @@ it('fails a generation that never reached the provider', function () {
 
     app(SyncGeneration::class)->fail($generation, 'content_policy_violation', 'The prompt was rejected.');
 
-    expect($generation)->status->toBe(GenerationStatus::Failed)->error_code->toBe('content_policy_violation');
+    expect($generation)->status->toBe(GenerationStatus::Failed)->error_code->toBe('content_policy_violation')
+        ->and($generation->user->creditTransactions()->where('type', CreditTransactionType::Release)->sole()->amount)->toBe(457_150_000);
 });
 
 it('does not fail a generation the provider already accepted', function () {
@@ -100,13 +101,41 @@ it('charges the user exactly once however many times success is reported', funct
 
     $charges = $generation->user->creditTransactions()->where('type', CreditTransactionType::Charge)->get();
     expect($charges)->toHaveCount(1)
-        ->and($charges->first())->amount->toBe(-381_887_500)->generation_id->toBe($generation->id);
+        ->and($charges->first())->amount->toBe(-381_887_500)->generation_id->toBe($generation->id)
+        ->and($generation->user->creditTransactions()->where('type', CreditTransactionType::Release)->sole()->amount)->toBe(457_150_000);
 });
 
-it('never charges for a generation that failed', function () {
+it('gives the hold back and charges nothing for a generation that failed', function () {
     $generation = Generation::factory()->processing()->create();
+    $sync = app(SyncGeneration::class);
 
-    app(SyncGeneration::class)->handle($generation, RemoteGeneration::fromArray(pixelforgeGeneration($generation, 'failed')));
+    $sync->handle($generation, RemoteGeneration::fromArray(pixelforgeGeneration($generation, 'failed')));
+    $sync->handle($generation, RemoteGeneration::fromArray(pixelforgeGeneration($generation, 'failed')));
 
-    expect($generation->user->creditTransactions()->count())->toBe(0);
+    $ledger = $generation->user->creditTransactions()->orderBy('id')->get()->map(fn ($transaction) => [$transaction->type, $transaction->amount]);
+    expect($ledger->all())->toBe([
+        [CreditTransactionType::Hold, -457_150_000],
+        [CreditTransactionType::Release, 457_150_000],
+    ]);
+});
+
+it('records the model cost of a success that arrives after we gave up, without charging for it', function () {
+    $generation = Generation::factory()->create();
+    $sync = app(SyncGeneration::class);
+    $sync->fail($generation, 'submission_failed');
+
+    $sync->handle($generation, RemoteGeneration::fromArray(pixelforgeGeneration($generation, 'succeeded')));
+
+    expect($generation)->status->toBe(GenerationStatus::Failed)->cost->toBe(305_510_000)->price->toBeNull()
+        ->and($generation->completed_at->toIso8601ZuluString())->toBe('2026-11-04T14:03:29Z')
+        ->and($generation->user->creditTransactions()->where('type', CreditTransactionType::Charge)->exists())->toBeFalse();
+});
+
+it('never charges more than the most the customer was shown', function () {
+    $generation = Generation::factory()->processing()->create(['max_price' => 300_000_000]);
+
+    app(SyncGeneration::class)->handle($generation, RemoteGeneration::fromArray(pixelforgeGeneration($generation, 'succeeded')));
+
+    expect($generation)->cost->toBe(305_510_000)->price->toBe(300_000_000)
+        ->and($generation->user->creditTransactions()->where('type', CreditTransactionType::Charge)->sole()->amount)->toBe(-300_000_000);
 });

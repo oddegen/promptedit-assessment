@@ -33,9 +33,9 @@ it('submits a generation with its own id as the idempotency key and metadata', f
         && $request->hasHeader('Idempotency-Key', $generation->id)
         && $request->data() === [
             'prompt' => $generation->prompt,
-            'size' => '1024x1024',
-            'quality' => 'medium',
-            'reference_images' => [],
+            'size' => '1536x1024',
+            'quality' => 'high',
+            'reference_images' => ['https://example.com/reference.png'],
             'metadata' => ['generation_id' => $generation->id],
         ]);
 });

@@ -13,10 +13,10 @@ beforeEach(function () {
     Generation::factory()->failed()->create(['completed_at' => '2026-11-09 10:00:00']);
 });
 
-it('keeps the report to admins', function () {
+it('sends customers who open the report to the studio', function () {
     $response = $this->actingAs(User::factory()->create())->get(route('admin.report'));
 
-    $response->assertForbidden();
+    $response->assertRedirect(route('studio'));
 });
 
 it('adds up what was charged, what the model cost and the margin', function () {
@@ -64,3 +64,9 @@ it('still shows our numbers when Pixelforge cannot be reached', function () {
         ->where('summary.generations', 2)
         ->loadDeferredProps(fn (Assert $reload) => $reload->where('provider.available', false)));
 });
+
+it('sends admins to the report instead of the customer pages', function (string $route) {
+    $this->actingAs(User::factory()->admin()->create())
+        ->get(route($route))
+        ->assertRedirect(route('admin.report'));
+})->with(['studio', 'generations.index', 'credits.index']);

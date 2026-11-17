@@ -58,7 +58,7 @@ export function formatPrice(
 }
 
 export function formatPriceRange(minimum: number, maximum: number): string {
-    const low = formatPrice(minimum);
+    const low = formatPrice(minimum, 'floor');
     const high = formatPrice(maximum, 'ceiling');
 
     return low === high ? high : `${low}–${high}`;
