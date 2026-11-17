@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use LogicException;
 
 /**
  * @property int $id
@@ -25,6 +26,15 @@ class CreditTransaction extends Model
     use HasFactory;
 
     public const UPDATED_AT = null;
+
+    /**
+     * Bootstrap the model and its traits.
+     */
+    protected static function booted(): void
+    {
+        static::updating(fn () => throw new LogicException('Credit transactions are append-only.'));
+        static::deleting(fn () => throw new LogicException('Credit transactions are append-only.'));
+    }
 
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo

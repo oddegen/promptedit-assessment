@@ -28,8 +28,8 @@ class GenerationController extends Controller
         return Inertia::render('generations/Index', [
             'generations' => Inertia::scroll(fn () => GenerationResource::collection(
                 $user->generations()
-                    ->latestVersions()
                     ->withVersionCount()
+                    ->withVersionNumber()
                     ->when($statuses, fn ($query, array $statuses) => $query->whereIn('status', $statuses))
                     ->latest()
                     ->orderByDesc('id')

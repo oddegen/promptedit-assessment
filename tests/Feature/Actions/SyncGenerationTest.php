@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\SyncGeneration;
+use App\Enums\CreditTransactionType;
 use App\Enums\GenerationStatus;
 use App\Models\Generation;
 use App\Services\Pixelforge\RemoteGeneration;
@@ -88,4 +89,24 @@ it('does not fail a generation the provider already accepted', function () {
     app(SyncGeneration::class)->fail($generation, 'submission_failed');
 
     expect($generation)->status->toBe(GenerationStatus::Queued)->error_code->toBeNull();
+});
+
+it('charges the user exactly once however many times success is reported', function () {
+    $generation = Generation::factory()->processing()->create();
+    $sync = app(SyncGeneration::class);
+
+    $sync->handle($generation, RemoteGeneration::fromArray(pixelforgeGeneration($generation, 'succeeded')));
+    $sync->handle($generation, RemoteGeneration::fromArray(pixelforgeGeneration($generation, 'succeeded')));
+
+    $charges = $generation->user->creditTransactions()->where('type', CreditTransactionType::Charge)->get();
+    expect($charges)->toHaveCount(1)
+        ->and($charges->first())->amount->toBe(-381_887_500)->generation_id->toBe($generation->id);
+});
+
+it('never charges for a generation that failed', function () {
+    $generation = Generation::factory()->processing()->create();
+
+    app(SyncGeneration::class)->handle($generation, RemoteGeneration::fromArray(pixelforgeGeneration($generation, 'failed')));
+
+    expect($generation->user->creditTransactions()->count())->toBe(0);
 });

@@ -31,7 +31,7 @@ class SubmitGeneration implements ShouldQueue
 
     public function retryUntil(): DateTimeInterface
     {
-        return now()->addMinutes(20);
+        return now()->addMinutes(5);
     }
 
     /** @return list<object> */

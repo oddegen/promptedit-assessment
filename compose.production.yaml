@@ -11,9 +11,9 @@ services:
         <<: *app
         command: sh -c 'php artisan optimize && exec frankenphp run --config /etc/frankenphp/Caddyfile --adapter caddyfile'
         environment:
-            SERVER_NAME: ':80'
+            SERVER_NAME: ':8080'
         ports:
-            - '127.0.0.1:8080:80'
+            - '127.0.0.1:8080:8080'
     queue:
         <<: *app
         command: sh -c 'php artisan optimize && exec php artisan queue:work --sleep=1 --max-time=3600'

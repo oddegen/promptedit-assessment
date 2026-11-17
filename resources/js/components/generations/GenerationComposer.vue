@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useForm, useHttp } from '@inertiajs/vue3';
+import { Link, useForm, useHttp, usePage } from '@inertiajs/vue3';
 import { ImageOff, LoaderCircle, Plus, X } from '@lucide/vue';
 import NumberFlow from '@number-flow/vue';
 import { watchDebounced } from '@vueuse/core';
 import { computed, ref, watch } from 'vue';
+import { index as creditsIndex } from '@/actions/App/Http/Controllers/CreditController';
 import { store } from '@/actions/App/Http/Controllers/GenerationController';
 import GenerationEstimateController from '@/actions/App/Http/Controllers/GenerationEstimateController';
 import GenerationVersionController from '@/actions/App/Http/Controllers/GenerationVersionController';
@@ -21,7 +22,11 @@ import type { Estimate, Generation, GenerationRequest } from '@/types';
 const MAX_PROMPT_LENGTH = 4000;
 const MAX_REFERENCES = 4;
 
-const props = defineProps<{ draft?: Generation | null; embedded?: boolean }>();
+const props = defineProps<{
+    draft?: Generation | null;
+    embedded?: boolean;
+    prefill?: Pick<GenerationRequest, 'prompt' | 'size' | 'quality'> | null;
+}>();
 
 const emit = defineEmits<{ cancel: [] }>();
 
@@ -37,6 +42,10 @@ const versionOf = ref<Generation | null>(null);
 if (props.draft) {
     Object.assign(form, requestFrom(props.draft));
     versionOf.value = props.draft;
+}
+
+if (props.prefill) {
+    Object.assign(form, props.prefill);
 }
 
 const quote = useHttp<GenerationRequest, Estimate>(
@@ -76,6 +85,33 @@ watchDebounced(
 );
 
 const hasPrompt = computed(() => form.prompt.trim() !== '');
+const page = usePage();
+
+const shortfall = computed(() => {
+    const credits = page.props.credits;
+
+    if (!hasPrompt.value || !estimate.value || !credits) {
+        return null;
+    }
+
+    const needed = estimate.value.maximum;
+
+    if (needed <= credits.available) {
+        return null;
+    }
+
+    if (credits.held > 0 && needed <= credits.balance) {
+        return `${formatPrice(credits.held)} is set aside for ${credits.running} ${credits.running === 1 ? 'image' : 'images'} in progress, so you have ${formatPrice(Math.max(0, credits.available), 'floor')} free. This one needs up to ${formatPrice(needed, 'ceiling')}.`;
+    }
+
+    return `This needs up to ${formatPrice(needed, 'ceiling')}, but your balance is ${formatPrice(credits.balance, 'floor')}.`;
+});
+
+const blockedMessage = computed(
+    () =>
+        (form.errors as Partial<Record<string, string>>).credits ??
+        shortfall.value,
+);
 const shape = computed(() => shapeOf(form.size));
 const canAddReference = computed(
     () => form.reference_images.length < MAX_REFERENCES,
@@ -222,7 +258,7 @@ defineExpose({ fill });
                 </button>
             </div>
             <div
-                class="grid min-h-0 gap-5 overflow-y-auto overscroll-contain [mask-image:linear-gradient(to_bottom,transparent,black_0.75rem,black_calc(100%-2.5rem),transparent)] px-5 pt-3 pb-8"
+                class="grid min-h-0 gap-5 px-5 pt-3 pb-8 lg:overflow-y-auto lg:overscroll-contain lg:[mask-image:linear-gradient(to_bottom,transparent,black_0.75rem,black_calc(100%-2.5rem),transparent)]"
             >
                 <div class="grid gap-2">
                     <div
@@ -473,9 +509,23 @@ defineExpose({ fill });
                         </Tooltip>
                     </TooltipProvider>
                 </div>
+                <p
+                    v-if="blockedMessage"
+                    class="rounded-2xl bg-background px-4 py-3 text-[13px] leading-relaxed"
+                    role="status"
+                >
+                    {{ blockedMessage }}
+                    <Link
+                        :href="creditsIndex()"
+                        class="font-medium underline underline-offset-4"
+                        >Add credits</Link
+                    >
+                </p>
                 <button
                     type="submit"
-                    :disabled="form.processing || !hasPrompt"
+                    :disabled="
+                        form.processing || !hasPrompt || shortfall !== null
+                    "
                     class="flex h-12 items-center justify-between rounded-full bg-primary pr-2 pl-5 text-[15px] font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
                 >
                     <span class="inline-flex items-center gap-2">

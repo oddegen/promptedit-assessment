@@ -2,7 +2,9 @@
 
 namespace App\Actions;
 
+use App\Enums\CreditTransactionType;
 use App\Enums\GenerationStatus;
+use App\Models\CreditTransaction;
 use App\Models\Generation;
 use App\Services\Markup;
 use App\Services\Pixelforge\RemoteGeneration;
@@ -22,9 +24,21 @@ class SyncGeneration
                 ->whereNull('provider_id')
                 ->update(['provider_id' => $remote->id, 'rates' => json_encode($remote->rates)]);
 
-            Generation::whereKey($generation->id)
+            $changes = $this->changesFor($remote);
+
+            $moved = Generation::whereKey($generation->id)
                 ->whereIn('status', $remote->status->reachableFrom())
-                ->update($this->changesFor($remote));
+                ->update($changes);
+
+            if ($moved === 1 && isset($changes['price'])) {
+                CreditTransaction::query()->insertOrIgnore([
+                    'user_id' => $generation->user_id,
+                    'generation_id' => $generation->id,
+                    'type' => CreditTransactionType::Charge->value,
+                    'amount' => -$changes['price'],
+                    'created_at' => now(),
+                ]);
+            }
         });
 
         $generation->refresh();

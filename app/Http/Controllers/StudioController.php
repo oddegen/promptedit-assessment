@@ -16,8 +16,6 @@ class StudioController extends Controller
      */
     public function __invoke(Request $request, #[CurrentUser] User $user): Response
     {
-        $draft = $user->generations()->find($request->string('from')->toString());
-
         return Inertia::render('Studio', [
             'generations' => GenerationResource::collection(
                 $user->generations()->latestVersions()->withVersionCount()->latest()->orderByDesc('id')->limit(30)->get(),
@@ -26,7 +24,7 @@ class StudioController extends Controller
                 'count' => $user->generations()->latestVersions()->count(),
                 'spent' => (int) $user->generations()->sum('price'),
             ],
-            'draft' => $draft === null ? null : new GenerationResource($draft),
+            'prefill' => $request->session()->pull('draft'),
         ]);
     }
 }

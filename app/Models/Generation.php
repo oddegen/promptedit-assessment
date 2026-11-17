@@ -86,8 +86,25 @@ class Generation extends Model
     protected function withVersionCount(Builder $query): void
     {
         $query->addSelect(['version_count' => DB::table('generations as versions')
-            ->selectRaw('count(*) + 1')
-            ->whereColumn('versions.parent_id', 'generations.parent_id')]);
+            ->selectRaw('count(*)')
+            ->whereRaw('coalesce(versions.parent_id, versions.id) = coalesce(generations.parent_id, generations.id)')]);
+    }
+
+    /** @param Builder<self> $query */
+    #[Scope]
+    protected function withVersionNumber(Builder $query): void
+    {
+        $query->addSelect(['version_number' => DB::table('generations as earlier')
+            ->selectRaw('count(*)')
+            ->whereRaw('coalesce(earlier.parent_id, earlier.id) = coalesce(generations.parent_id, generations.id)')
+            ->whereColumn('earlier.id', '<=', 'generations.id')]);
+    }
+
+    /** @param Builder<self> $query */
+    #[Scope]
+    protected function inFlight(Builder $query): void
+    {
+        $query->whereIn('status', [GenerationStatus::Pending, GenerationStatus::Queued, GenerationStatus::Processing]);
     }
 
     /** @param Builder<self> $query */
@@ -120,6 +137,7 @@ class Generation extends Model
             'cost' => 'integer',
             'price' => 'integer',
             'version_count' => 'integer',
+            'version_number' => 'integer',
             'image_url_expires_at' => 'datetime',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',

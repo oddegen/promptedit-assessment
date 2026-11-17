@@ -7,12 +7,12 @@ import GenerationWall from '@/components/generations/GenerationWall.vue';
 import { useRetry } from '@/composables/useRetry';
 import { isInFlight } from '@/lib/generations';
 import { formatPrice } from '@/lib/money';
-import type { Generation, GenerationSummary } from '@/types';
+import type { Generation, GenerationRequest, GenerationSummary } from '@/types';
 
 const props = defineProps<{
     generations: Generation[];
     summary: GenerationSummary;
-    draft: Generation | null;
+    prefill: Pick<GenerationRequest, 'prompt' | 'size' | 'quality'> | null;
 }>();
 
 const composer = ref<InstanceType<typeof GenerationComposer> | null>(null);
@@ -92,7 +92,7 @@ const { retrying, retry } = useRetry();
 
         <GenerationComposer
             ref="composer"
-            :draft="draft"
+            :prefill="prefill"
             class="order-1 lg:sticky lg:top-[88px] lg:order-2 lg:max-h-[calc(100dvh-104px)] lg:self-start"
         />
     </div>

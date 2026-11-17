@@ -33,26 +33,6 @@ test('the studio shows only the user\'s own images and what they have spent', fu
         ->where('summary.spent', 381_887_500));
 });
 
-test('the studio starts from one of the user\'s generations when asked', function () {
-    $user = User::factory()->create();
-    $generation = Generation::factory()->for($user)->failed()->create();
-
-    $response = $this->actingAs($user)->get(route('studio', ['from' => $generation->id]));
-
-    $response->assertInertia(fn (Assert $page) => $page
-        ->where('draft.id', $generation->id)
-        ->where('draft.prompt', $generation->prompt));
-});
-
-test('the studio ignores another user\'s generation as a starting point', function () {
-    $user = User::factory()->create();
-    $generation = Generation::factory()->failed()->create();
-
-    $response = $this->actingAs($user)->get(route('studio', ['from' => $generation->id]));
-
-    $response->assertInertia(fn (Assert $page) => $page->where('draft', null));
-});
-
 test('the studio shows each idea once, as its latest version', function () {
     $user = User::factory()->create();
     $original = Generation::factory()->for($user)->failed()->create();

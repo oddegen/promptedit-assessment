@@ -34,6 +34,7 @@ class GenerationResource extends JsonResource
             'started_at' => $this->started_at,
             'completed_at' => $this->completed_at,
             'version_count' => $this->whenHas('version_count'),
+            'version_number' => $this->whenHas('version_number'),
         ];
     }
 }

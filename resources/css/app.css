@@ -9,6 +9,22 @@
 
 @theme {
     --animate-sweep: sweep 2.4s ease-in-out infinite;
+    --animate-drift: drift var(--drift-duration, 18s)
+        cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+
+    @keyframes drift {
+        from {
+            transform: translate3d(0, 0, 0) rotate(var(--drift-rotate, 0deg));
+        }
+        to {
+            transform: translate3d(
+                    var(--drift-x, 10px),
+                    var(--drift-y, -14px),
+                    0
+                )
+                rotate(calc(var(--drift-rotate, 0deg) + 3deg));
+        }
+    }
 
     @keyframes sweep {
         from {

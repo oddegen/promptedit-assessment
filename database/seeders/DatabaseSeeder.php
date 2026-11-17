@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CreditTransactionType;
 use App\Enums\GenerationStatus;
 use App\Enums\Quality;
 use App\Enums\Size;
@@ -12,6 +13,7 @@ use App\Services\Pixelforge\PixelforgeClient;
 use App\Services\Pixelforge\TokenUsage;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Config;
 
 class DatabaseSeeder extends Seeder
 {
@@ -24,9 +26,18 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        $user = User::factory()->create([
+        $user = User::factory()->admin()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
+        ]);
+
+        $user->creditTransactions()->create([
+            'type' => CreditTransactionType::Bonus,
+            'amount' => Config::integer('credits.welcome_bonus'),
+        ]);
+        $user->creditTransactions()->create([
+            'type' => CreditTransactionType::Purchase,
+            'amount' => 10_000_000_000,
         ]);
 
         $prices = $pixelforge->prices();
@@ -55,7 +66,7 @@ class DatabaseSeeder extends Seeder
             $sentAt = now()->subMinutes(($position + 1) * 13);
             $completedAt = $sentAt->addSeconds(random_int(10, 30));
 
-            Generation::factory()->for($user)->succeeded()->create([
+            $generation = Generation::factory()->for($user)->succeeded()->create([
                 'prompt' => $prompt,
                 'size' => $size,
                 'quality' => $quality,
@@ -70,6 +81,12 @@ class DatabaseSeeder extends Seeder
                 'started_at' => $sentAt->addSeconds(2),
                 'completed_at' => $completedAt,
                 'image_url_expires_at' => $completedAt->addDay(),
+            ]);
+
+            $user->creditTransactions()->create([
+                'generation_id' => $generation->id,
+                'type' => CreditTransactionType::Charge,
+                'amount' => -$generation->price,
             ]);
         }
 

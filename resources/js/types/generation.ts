@@ -27,6 +27,7 @@ export type Generation = {
     started_at: string | null;
     completed_at: string | null;
     version_count?: number;
+    version_number?: number;
 };
 
 export type GenerationRequest = {

@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\CreditTransactionType;
+use App\Models\User;
 use Laravel\Fortify\Features;
 
 beforeEach(function () {
@@ -22,4 +24,16 @@ test('new users can register', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('studio', absolute: false));
+});
+
+test('new users start with the welcome credit', function () {
+    $this->post(route('register.store'), [
+        'name' => 'Test User',
+        'email' => 'test@example.com',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ]);
+
+    $credit = User::query()->sole()->creditTransactions()->sole();
+    expect($credit)->type->toBe(CreditTransactionType::Bonus)->amount->toBe(1_000_000_000);
 });

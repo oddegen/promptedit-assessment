@@ -1,12 +1,10 @@
-FROM dunglas/frankenphp:1-php8.5-trixie AS base
+FROM dunglas/frankenphp:1-php8.5-trixie AS build
 
-RUN install-php-extensions bcmath intl pcntl pdo_pgsql zip \
-    && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
-    && printf 'opcache.validate_timestamps=0\nopcache.memory_consumption=128\n' > "$PHP_INI_DIR/conf.d/app.ini"
+RUN install-php-extensions bcmath intl pcntl pdo_pgsql zip
 
 WORKDIR /app
 
-FROM base AS vendor
+FROM build AS vendor
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
@@ -29,13 +27,14 @@ COPY --from=node-modules /usr/local/bin/node /usr/local/bin/node
 COPY --from=node-modules /app/node_modules ./node_modules
 RUN node_modules/.bin/vp build
 
-FROM base AS app
+FROM dunglas/frankenphp:1-php8.5-alpine AS app
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libcap2-bin \
-    && rm -rf /var/lib/apt/lists/* \
-    && setcap CAP_NET_BIND_SERVICE=+eip /usr/local/bin/frankenphp \
+RUN install-php-extensions bcmath intl pcntl pdo_pgsql \
+    && cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
+    && printf 'opcache.validate_timestamps=0\nopcache.memory_consumption=128\n' > "$PHP_INI_DIR/conf.d/app.ini" \
     && chown -R www-data:www-data /data/caddy /config/caddy
+
+WORKDIR /app
 
 COPY --from=vendor --chown=www-data:www-data /app /app
 COPY --from=assets --chown=www-data:www-data /app/public/build /app/public/build

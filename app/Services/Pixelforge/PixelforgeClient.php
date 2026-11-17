@@ -4,6 +4,9 @@ namespace App\Services\Pixelforge;
 
 use App\Exceptions\PixelforgeException;
 use App\Models\Generation;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
+use Carbon\CarbonInterface;
 use Illuminate\Container\Attributes\Config;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
@@ -51,6 +54,27 @@ class PixelforgeClient
     public function generation(string $id): RemoteGeneration
     {
         return $this->remoteGeneration($this->request()->get("generations/{$id}"));
+    }
+
+    /** @return array<string, array{generations: int, cost: int}> */
+    public function usage(CarbonInterface $from, CarbonInterface $to): array
+    {
+        try {
+            $usage = $this->send($this->request()->get('usage', [
+                'start_date' => $from->toDateString(),
+                'end_date' => $to->toDateString(),
+            ]));
+        } catch (ConnectionException $exception) {
+            throw new PixelforgeException($exception->getMessage(), 'unreachable', 503);
+        }
+
+        /** @var list<array{date: string, generations: int, cost_usd: string}> $days */
+        $days = $usage['data'];
+
+        return collect($days)->mapWithKeys(fn (array $day) => [$day['date'] => [
+            'generations' => $day['generations'],
+            'cost' => BigDecimal::of($day['cost_usd'])->withPointMovedRight(9)->toScale(0, RoundingMode::Unnecessary)->toInt(),
+        ]])->all();
     }
 
     private function request(): PendingRequest

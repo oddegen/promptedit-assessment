@@ -42,6 +42,16 @@ const age = useTimeAgo(() => props.generation.created_at);
 
 const inFlight = computed(() => isInFlight(props.generation.status));
 const versions = computed(() => props.generation.version_count ?? 1);
+const versionLabel = computed(() =>
+    props.generation.version_number
+        ? `v${props.generation.version_number} of ${versions.value}`
+        : String(versions.value),
+);
+const versionDescription = computed(() =>
+    props.generation.version_number
+        ? `Version ${props.generation.version_number} of ${versions.value}`
+        : `${versions.value} versions`,
+);
 const expired = computed(
     () =>
         props.generation.status === 'succeeded' &&
@@ -122,8 +132,8 @@ const details = computed(() => {
                 <span
                     v-if="versions > 1"
                     class="absolute top-2.5 left-2.5 inline-flex h-6 items-center gap-1 rounded-full bg-background/95 px-2 text-xs font-medium tabular-nums shadow-sm"
-                    :aria-label="`${versions} versions`"
-                    ><Layers class="size-3.5" />{{ versions }}</span
+                    :aria-label="versionDescription"
+                    ><Layers class="size-3.5" />{{ versionLabel }}</span
                 >
                 <div
                     class="absolute top-2.5 right-2.5 flex gap-1.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
@@ -180,8 +190,8 @@ const details = computed(() => {
                         <span
                             v-if="versions > 1"
                             class="inline-flex h-6 items-center gap-1 rounded-full bg-background px-2 text-xs font-medium tabular-nums"
-                            :aria-label="`${versions} versions`"
-                            ><Layers class="size-3.5" />{{ versions }}</span
+                            :aria-label="versionDescription"
+                            ><Layers class="size-3.5" />{{ versionLabel }}</span
                         >
                     </div>
                     <p

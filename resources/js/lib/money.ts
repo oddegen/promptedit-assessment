@@ -1,4 +1,4 @@
-type PriceStyle = 'standard' | 'ceiling' | 'exact';
+type PriceStyle = 'standard' | 'ceiling' | 'floor' | 'exact';
 
 type PriceFormat = Omit<Intl.NumberFormatOptions, 'notation'>;
 
@@ -21,6 +21,16 @@ const formats: Record<PriceStyle, PriceFormat> = {
         maximumSignificantDigits: 2,
         roundingPriority: 'morePrecision',
         roundingMode: 'ceil',
+    },
+    floor: {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        minimumSignificantDigits: 2,
+        maximumSignificantDigits: 2,
+        roundingPriority: 'morePrecision',
+        roundingMode: 'floor',
     },
     exact: {
         style: 'currency',

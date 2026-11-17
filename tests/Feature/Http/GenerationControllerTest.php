@@ -18,7 +18,7 @@ $request = [
 it('starts a generation and returns to the studio', function () use ($request) {
     Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricing())]);
     Queue::fake([SubmitGeneration::class]);
-    $user = User::factory()->create();
+    $user = User::factory()->withCredits()->create();
 
     $response = $this->actingAs($user)->from(route('studio'))->post(route('generations.store'), $request);
 
@@ -93,7 +93,7 @@ it('lists only generations still in progress when filtered to running', function
 it('starts a new version of one of the user\'s generations', function () use ($request) {
     Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricing())]);
     Queue::fake([SubmitGeneration::class]);
-    $original = Generation::factory()->failed()->create();
+    $original = Generation::factory()->for(User::factory()->withCredits())->failed()->create();
 
     $this->actingAs($original->user)->from(route('studio'))->post(route('generations.store'), [...$request, 'parent_id' => $original->id]);
 
@@ -123,17 +123,21 @@ it('shows every version of the idea and what they cost together', function () {
         ->where('spent', 381_887_500));
 });
 
-it('filters ideas by their latest version', function () {
+it('lists every attempt in history with its place among the versions', function () {
     $user = User::factory()->create();
     $original = Generation::factory()->for($user)->failed()->create();
+    $retry = Generation::factory()->for($user)->failed()->create(['parent_id' => $original->id]);
     Generation::factory()->for($user)->succeeded()->create(['parent_id' => $original->id]);
-    $stillFailing = Generation::factory()->for($user)->failed()->create();
 
     $response = $this->actingAs($user)->get(route('generations.index', ['filter' => 'failed']));
 
     $response->assertInertia(fn (Assert $page) => $page
-        ->has('generations.data', 1)
-        ->where('generations.data.0.id', $stillFailing->id));
+        ->has('generations.data', 2)
+        ->where('generations.data.0.id', $retry->id)
+        ->where('generations.data.0.version_number', 2)
+        ->where('generations.data.0.version_count', 3)
+        ->where('generations.data.1.id', $original->id)
+        ->where('generations.data.1.version_number', 1));
 });
 
 it('tells the user to slow down instead of showing an error page', function () use ($request) {
@@ -155,7 +159,7 @@ it('tells the user to slow down instead of showing an error page', function () u
 it('opens a new version from the detail page', function () use ($request) {
     Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricing())]);
     Queue::fake([SubmitGeneration::class]);
-    $original = Generation::factory()->failed()->create();
+    $original = Generation::factory()->for(User::factory()->withCredits())->failed()->create();
 
     $response = $this->actingAs($original->user)->post(route('generations.versions.store', $original), $request);
 

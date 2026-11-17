@@ -9,11 +9,12 @@ use App\Models\Generation;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 
 it('saves a pending generation priced from current rates and queues its submission', function () {
     Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricing())]);
     Queue::fake([SubmitGeneration::class]);
-    $user = User::factory()->create();
+    $user = User::factory()->withCredits()->create();
 
     $generation = app(CreateGeneration::class)->handle($user, 'A lighthouse on a cliff at dawn', Size::Square, Quality::Medium);
 
@@ -29,7 +30,7 @@ it('saves a pending generation priced from current rates and queues its submissi
 it('files every new version under the original generation', function () {
     Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricing())]);
     Queue::fake([SubmitGeneration::class]);
-    $original = Generation::factory()->failed()->create();
+    $original = Generation::factory()->for(User::factory()->withCredits())->failed()->create();
     $create = app(CreateGeneration::class);
 
     $second = $create->handle($original->user, $original->prompt, Size::Square, Quality::Medium, versionOf: $original);
@@ -37,4 +38,26 @@ it('files every new version under the original generation', function () {
 
     expect($second->parent_id)->toBe($original->id)
         ->and($third->parent_id)->toBe($original->id);
+});
+
+it('refuses an image the balance cannot cover', function () {
+    Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricing())]);
+    Queue::fake([SubmitGeneration::class]);
+    $user = User::factory()->withCredits(10_000_000)->create();
+
+    expect(fn () => app(CreateGeneration::class)->handle($user, 'A lighthouse on a cliff at dawn', Size::Square, Quality::Medium))
+        ->toThrow(ValidationException::class, 'This needs up to $0.087, but your balance is $0.010. Add credits to keep going.');
+
+    expect($user->generations()->count())->toBe(0);
+    Queue::assertNothingPushed();
+});
+
+it('explains when images in progress are holding the balance', function () {
+    Http::fake(['pixelforge.promptedit.dev/v1/pricing' => Http::response(pixelforgePricing())]);
+    Queue::fake([SubmitGeneration::class]);
+    $user = User::factory()->withCredits(100_000_000)->create();
+    Generation::factory()->for($user)->create();
+
+    expect(fn () => app(CreateGeneration::class)->handle($user, 'A lighthouse on a cliff at dawn', Size::Square, Quality::Medium))
+        ->toThrow(ValidationException::class, '$0.088 is set aside for 1 image in progress. This one needs up to $0.087 and you have $0.013 free.');
 });

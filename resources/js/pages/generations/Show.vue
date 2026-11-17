@@ -309,7 +309,7 @@ function retry() {
             class="flex flex-col overflow-hidden rounded-[22px] bg-secondary lg:min-h-0"
         >
             <div
-                class="grid min-h-0 flex-1 content-start gap-5 overflow-y-auto overscroll-contain p-6"
+                class="grid min-h-0 flex-1 content-start gap-5 p-6 lg:overflow-y-auto lg:overscroll-contain"
             >
                 <div class="grid gap-3">
                     <h1 class="line-clamp-4 text-lg leading-snug font-medium">
